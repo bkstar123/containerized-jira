@@ -1,8 +1,7 @@
-version: '3.8'
 
 services:
   postgres:
-    image: postgres:13
+    image: postgres:${POSTGRES_VERSION:-latest}
     container_name: jira_postgres
     restart: unless-stopped
     env_file:
@@ -13,11 +12,11 @@ services:
       - jira_network
 
   jira:
-    image: atlassian/jira-software:10.0.0
+    image: atlassian/jira-software:${JIRA_VERSION:-latest}
     container_name: jira
     restart: unless-stopped
     ports:
-      - "8088:8080"
+      - "${HOST_PORT}:8080"
     environment:
       ATL_JDBC_URL: jdbc:postgresql://postgres:5432/jiradb
       ATL_JDBC_USER: ${POSTGRES_USER}
