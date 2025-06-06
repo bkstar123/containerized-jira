@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgres:${POSTGRES_VERSION:-13}
+    container_name: jira_postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - jira_postgres_data:/var/lib/postgresql/data
+    networks:
+      - jira_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      com.example.service: "postgres"
+      com.example.version: "${POSTGRES_VERSION}"
+  jira:
+    image: atlassian/jira-software:${JIRA_VERSION:-10.0.0}
+    container_name: jira
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT}:8080"
+    environment:
+      ATL_JDBC_URL: jdbc:postgresql://postgres:5432/jiradb
+      ATL_JDBC_USER: ${POSTGRES_USER}
+      ATL_JDBC_PASSWORD: ${POSTGRES_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - jira_data:/var/atlassian/application-data/jira
+    networks:
+      - jira_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "2G"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      com.example.service: "jira"
+      com.example.version: "${JIRA_VERSION}"
+volumes:
+  jira_postgres_data:
+  jira_data:
+networks:
+  jira_network:
+    driver: bridge
